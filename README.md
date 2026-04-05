@@ -1,6 +1,17 @@
 # OpenWrt Repeater Builder
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Build custom OpenWrt firmware for WiFi repeaters and bridges. Your WiFi configuration is baked into the firmware—just flash and go.
+
+## Why This Project?
+
+Consumer WiFi extenders are black boxes with proprietary firmware, limited control, and no transparency. OpenWrt gives you full control, but building custom firmware with your WiFi credentials baked in requires navigating the ImageBuilder, UCI scripting, and network configuration — none of which is beginner-friendly.
+
+**Goals:**
+- Eliminate manual post-flash configuration by baking WiFi credentials into the firmware
+- Support multiple repeater/bridge modes for different network layouts
+- Work with any OpenWrt-supported device via standard profile and target identifiers
 
 ## Quick Start
 
