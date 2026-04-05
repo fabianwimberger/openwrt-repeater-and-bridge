@@ -183,4 +183,4 @@ brew install sshpass
 
 ## License
 
-MIT
+MIT License — see [LICENSE](LICENSE) file.
