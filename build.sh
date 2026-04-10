@@ -310,7 +310,7 @@ uci set network.wwan.netmask='255.255.255.0'
 # Relay bridge
 uci set network.repeater_bridge=interface
 uci set network.repeater_bridge.proto='relay'
-uci set network.repeater_bridge.local_addr='{{DEVICE_IP}}'
+uci set network.repeater_bridge.ipaddr='{{DEVICE_IP}}'
 uci add_list network.repeater_bridge.network='lan'
 uci add_list network.repeater_bridge.network='wwan'
 uci set network.repeater_bridge.forward_bcast='1'
