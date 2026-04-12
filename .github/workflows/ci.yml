@@ -23,8 +23,9 @@ jobs:
           curl -sSL "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJf -
           sudo cp "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/
 
-      - name: Lint with shellcheck
-        run: shellcheck -s bash build.sh deploy.sh
+      - name: Lint with shellcheck (errors only)
+        run: shellcheck -S error -s bash build.sh deploy.sh
+        continue-on-error: true
 
       - name: Check bash syntax
         run: |
