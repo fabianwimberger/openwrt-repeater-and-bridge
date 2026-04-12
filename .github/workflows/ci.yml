@@ -25,7 +25,6 @@ jobs:
 
       - name: Lint with shellcheck (errors only)
         run: shellcheck -S error -s bash build.sh deploy.sh
-        continue-on-error: true
 
       - name: Check bash syntax
         run: |

@@ -1,8 +1,6 @@
 # OpenWrt Repeater Builder
 
-[![CI](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions)
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Build custom OpenWrt firmware for WiFi repeaters and bridges. Your WiFi configuration is baked into the firmware—just flash and go.
 
@@ -14,6 +12,10 @@ Consumer WiFi extenders are black boxes with proprietary firmware, limited contr
 - Eliminate manual post-flash configuration by baking WiFi credentials into the firmware
 - Support multiple repeater/bridge modes for different network layouts
 - Work with any OpenWrt-supported device via standard profile and target identifiers
+
+## Security Warning
+
+> **⚠️ IMPORTANT:** The default root password is `"admin"`. You **MUST** change this via `--root-password` for any production deployment. Leaving the default password on a network-facing device is a serious security risk.
 
 ## Quick Start
 
