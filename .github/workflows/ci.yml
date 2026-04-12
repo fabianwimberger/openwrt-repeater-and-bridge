@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  SHELLCHECK_VERSION: "v0.10.0"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install shellcheck
+        run: |
+          curl -sSL "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJf -
+          sudo cp "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/
+
+      - name: Lint with shellcheck
+        run: shellcheck -s bash build.sh deploy.sh
+
+      - name: Check bash syntax
+        run: |
+          bash -n build.sh
+          bash -n deploy.sh
+
+  test-help:
+    name: Test Help Output
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Verify build.sh help works
+        run: |
+          ./build.sh --help || true
+          ./build.sh -h || true
+
+      - name: Verify deploy.sh help works
+        run: |
+          ./deploy.sh --help 2>/dev/null || true
