@@ -13,6 +13,15 @@ Consumer WiFi extenders are opaque and underwhelming. OpenWrt solves that, but b
 
 > **⚠️ IMPORTANT:** The default root password is `"admin"`. You **MUST** change this via `--root-password` for any production deployment. Leaving the default password on a network-facing device is a serious security risk.
 
+## Features
+
+- **Multiple modes** — single-band (2.4GHz or 5GHz) and cross-band repeater/bridge layouts
+- **Baked-in credentials** — WiFi configuration written into the firmware via UCI defaults
+- **Relayd hotplug recovery** — restarts WiFi and relayd when the upstream AP drops out
+- **Flexible encryption** — WPA2, WPA3, or mixed, configurable per interface
+- **Works on any OpenWrt device** — uses standard profile and target identifiers
+- **Remote deploy** — push configuration to devices already running OpenWrt
+
 ## Quick Start
 
 ```bash
