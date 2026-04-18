@@ -49,6 +49,8 @@ Options:
   --root-password PWD   Admin password for the device (default: admin)
   --ssh-pubkey KEY      SSH public key for key-based auth
   --encryption TYPE     WPA encryption: sae, psk2, sae-mixed (default: sae-mixed)
+  --ap-encryption TYPE  AP encryption (default: psk2)
+  --no-ap               Bridge mode: no access point, only uplink
   --country CODE        Country code: US, DE, GB, etc. (default: US)
   --profile NAME        OpenWrt device profile (required)
   --target TARGET       OpenWrt target (required)
@@ -114,6 +116,7 @@ SSH_PUBKEY=""
 UPLINK_ENCRYPTION="sae-mixed"
 AP_ENCRYPTION="psk2"
 COUNTRY="US"
+AP_ENABLED=1
 OPENWRT_VERSION="25.12.2"
 OPENWRT_TARGET=""
 OPENWRT_PROFILE=""
@@ -149,6 +152,14 @@ while [[ $# -gt 0 ]]; do
         --encryption)
             UPLINK_ENCRYPTION="$2"
             shift 2
+            ;;
+        --ap-encryption)
+            AP_ENCRYPTION="$2"
+            shift 2
+            ;;
+        --no-ap)
+            AP_ENABLED=0
+            shift
             ;;
         --country)
             COUNTRY="$2"
@@ -337,6 +348,7 @@ uci set wireless.wwan.key='{{UPLINK_KEY}}'
 BASECFG
 
 # Add AP configuration
+if [[ "${AP_ENABLED:-1}" == "1" ]]; then
 if [[ "${AP_DUAL:-}" == "1" ]]; then
     # Dual-band AP
     cat >> files/etc/uci-defaults/99-device-setup << 'APCFG'
@@ -375,6 +387,7 @@ uci set wireless.ap_extra.encryption='{{AP_ENCRYPTION}}'
 uci set wireless.ap_extra.key='{{AP_KEY}}'
 uci set wireless.ap_extra.disassoc_low_ack='0'
 APCFG
+fi
 fi
 
 # Final config
@@ -455,7 +468,7 @@ docker run --rm \
     -v "$(pwd)/files:/builder/custom-files:ro" \
     -v "$(pwd)/output:/output" \
     "$DOCKER_TAG" \
-    "make image PROFILE='${OPENWRT_PROFILE}' PACKAGES='-wpad-basic-mbedtls wpad-mbedtls -dnsmasq -firewall4 -nftables -kmod-nft-offload -ppp -ppp-mod-pppoe relayd luci-proto-relay luci' FILES='/builder/custom-files' BIN_DIR='/output'" 2>&1 | while read line; do echo "  $line"; done
+    "make image PROFILE='${OPENWRT_PROFILE}' PACKAGES='-wpad-basic-mbedtls wpad-mbedtls -dnsmasq -odhcp6c -odhcpd-ipv6only -firewall4 -nftables -kmod-nft-offload -ppp -ppp-mod-pppoe relayd luci-proto-relay luci -luci-app-firewall' FILES='/builder/custom-files' BIN_DIR='/output'" 2>&1 | while read line; do echo "  $line"; done
 
 echo ""
 echo -e "${GREEN}=== Build complete ===${NC}"
