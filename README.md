@@ -111,6 +111,8 @@ These use one band to connect to your main router (uplink) and broadcast WiFi on
 | `--root-password <pwd>` | Admin password for the device | admin |
 | `--ssh-pubkey <key>` | SSH public key for key-based login | (none) |
 | `--encryption <type>` | `sae` (WPA3), `psk2` (WPA2), `sae-mixed` | sae-mixed |
+| `--ap-encryption <type>` | AP encryption (defaults to `psk2`) | psk2 |
+| `--no-ap` | Bridge mode: no access point, only uplink | (AP enabled) |
 | `--country <code>` | Regulatory country (US, DE, GB, etc.) | US |
 | `--profile <name>` | OpenWrt device profile | **(required)** |
 | `--target <target>` | OpenWrt target | **(required)** |
@@ -168,6 +170,24 @@ brew install sshpass
    - Connects to your main WiFi
    - Sets up the repeater/bridge
    - Starts broadcasting your extender network
+   - Enables relayd hotplug recovery to fix stuck IoT DHCP after upstream AP reboots
+
+## Reliability Features
+
+The firmware includes several reliability improvements for repeater/bridge setups:
+
+### Hotplug Relayd Recovery
+
+A hotplug script (`/etc/hotplug.d/iface/99-relayd-recovery`) watches the `wwan` interface. When it comes back up after an upstream AP outage, the script:
+1. Restarts relayd
+2. Waits 5 seconds for relayd to settle
+3. Reloads WiFi to force all AP clients to reassociate with a clean DHCP state
+
+A 60-second cooldown prevents the script from re-triggering itself when the STA reconnects after the reload.
+
+### `disassoc_low_ack=0`
+
+The AP interface is configured with `disassoc_low_ack='0'` to prevent clients from being disassociated when the channel is congested. This is especially important for IoT devices that may not roam aggressively.
 
 ## Troubleshooting
 

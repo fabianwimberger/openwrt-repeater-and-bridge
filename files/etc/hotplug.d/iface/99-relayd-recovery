@@ -1,0 +1,27 @@
+#!/bin/sh
+# Recover from upstream AP outage by restarting relayd and forcing AP clients
+# to reconnect. IoT devices behind the repeater often get stuck in a broken
+# DHCP state if they boot while relayd is not forwarding.
+[ "$INTERFACE" = "wwan" ] || exit 0
+[ "$ACTION" = "ifup" ] || exit 0
+
+COOLDOWN_FILE="/tmp/.relayd-recovery-cooldown"
+if [ -f "$COOLDOWN_FILE" ]; then
+    last_run=$(cat "$COOLDOWN_FILE")
+    now=$(date +%s)
+    if [ $((now - last_run)) -lt 60 ]; then
+        logger -t relayd-recovery "cooldown active, skipping"
+        exit 0
+    fi
+fi
+date +%s > "$COOLDOWN_FILE"
+
+logger -t relayd-recovery "wwan is up, restarting relayd and reloading wifi"
+/etc/init.d/relayd restart
+
+# Give relayd a moment to settle before tearing down the APs
+sleep 5
+
+# Reload all wireless interfaces. This forces AP clients to reconnect with a
+# clean DHCP state. A 60s cooldown prevents loops when the STA comes back up.
+wifi reload
