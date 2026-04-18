@@ -1,6 +1,7 @@
 # OpenWrt Repeater Builder
 
-[![CI](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Build custom OpenWrt firmware for WiFi repeaters and bridges. Your WiFi configuration is baked into the firmware—just flash and go.
 
