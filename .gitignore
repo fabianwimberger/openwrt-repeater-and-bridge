@@ -1,4 +1,7 @@
 *.bin
 *.img
 output/
+logs/
+files/etc/uci-defaults/
 .env
+profiles/*.conf
