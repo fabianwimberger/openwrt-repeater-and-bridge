@@ -1,21 +1,26 @@
 # OpenWrt Repeater Builder
 
-[![CI](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/fabianwimberger/openwrt-repeater-and-bridge/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Build custom OpenWrt firmware for WiFi repeaters and bridges. Your WiFi configuration is baked into the firmware—just flash and go.
 
-## Why This Project?
+## Background
 
-Consumer WiFi extenders are black boxes with proprietary firmware, limited control, and no transparency. OpenWrt gives you full control, but building custom firmware with your WiFi credentials baked in requires navigating the ImageBuilder, UCI scripting, and network configuration — none of which is beginner-friendly.
-
-**Goals:**
-- Eliminate manual post-flash configuration by baking WiFi credentials into the firmware
-- Support multiple repeater/bridge modes for different network layouts
-- Work with any OpenWrt-supported device via standard profile and target identifiers
+Consumer WiFi extenders are opaque and underwhelming. OpenWrt solves that, but baking your credentials into an ImageBuilder firmware means wrangling UCI, profiles, and network config. These scripts do that wrangling: pick a mode, pass SSID and password, get a flashable image for your device.
 
 ## Security Warning
 
 > **⚠️ IMPORTANT:** The default root password is `"admin"`. You **MUST** change this via `--root-password` for any production deployment. Leaving the default password on a network-facing device is a serious security risk.
+
+## Features
+
+- **Multiple modes** — single-band (2.4GHz or 5GHz) and cross-band repeater/bridge layouts
+- **Baked-in credentials** — WiFi configuration written into the firmware via UCI defaults
+- **Relayd hotplug recovery** — restarts WiFi and relayd when the upstream AP drops out
+- **Flexible encryption** — WPA2, WPA3, or mixed, configurable per interface
+- **Works on any OpenWrt device** — uses standard profile and target identifiers
+- **Remote deploy** — push configuration to devices already running OpenWrt
 
 ## Quick Start
 
