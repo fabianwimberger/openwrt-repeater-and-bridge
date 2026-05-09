@@ -71,7 +71,7 @@ if [[ -z "$FIRMWARE" ]]; then
 fi
 
 FIRMWARE_NAME=$(basename "$FIRMWARE")
-SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10)
+SSH_OPTS=(-F /dev/null -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10)
 
 echo -e "${BLUE}=== Deploying Firmware ===${NC}"
 echo ""
