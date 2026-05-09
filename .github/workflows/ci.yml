@@ -24,7 +24,7 @@ jobs:
           sudo cp "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/
 
       - name: Lint with shellcheck (errors only)
-        run: shellcheck -S error -s bash build.sh deploy.sh
+        run: shellcheck -S warning -s bash build.sh deploy.sh build-profile.sh deploy-profile.sh upgrade-all.sh
 
       - name: Check bash syntax
         run: |
@@ -47,3 +47,7 @@ jobs:
       - name: Verify deploy.sh help works
         run: |
           ./deploy.sh --help 2>/dev/null || true
+      - name: Verify template variables render correctly
+        run: |
+          bash -n build.sh
+          ! grep -q '\{\{' build.sh

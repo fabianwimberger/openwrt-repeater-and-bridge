@@ -36,7 +36,7 @@ Requirements:
 EOF
 }
 
-if [[ "$1" == "--help" || "$1" == "-h" ]]; then
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     show_help
     exit 0
 fi
@@ -78,6 +78,8 @@ echo ""
 echo "Device:    $DEVICE_IP"
 echo "Firmware:  $FIRMWARE_NAME"
 echo ""
+read -rp "Continue? [y/N] " confirm
+[[ "$confirm" != [yY] ]] && echo "Aborted." && exit 0
 
 # Test connection first
 echo -n "Testing connection... "
