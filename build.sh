@@ -5,7 +5,6 @@ set -euo pipefail
 #
 # Build firmware with WiFi configuration pre-installed.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Colors for output
 RED='\033[0;31m'
@@ -112,6 +111,10 @@ MGMT_IP="192.168.2.1"
 AP_SSID=""
 AP_KEY=""
 ROOT_PASSWORD="admin"
+if [[ "$ROOT_PASSWORD" == "admin" ]]; then
+    echo -e "${RED}Error: Default root password 'admin' is not allowed. Set a strong password with --root-password.${NC}"
+    exit 1
+fi
 SSH_PUBKEY=""
 UPLINK_ENCRYPTION="sae-mixed"
 AP_ENCRYPTION="psk2"
@@ -293,7 +296,7 @@ mkdir -p files/etc/uci-defaults
 cat > files/etc/uci-defaults/99-device-setup << 'BASECFG'
 #!/bin/sh
 # OpenWrt repeater/bridge setup
-# Mode: {{MODE}}
+# Mode: ${MODE}
 
 # Cleanup
 uci -q delete network.wwan
@@ -308,30 +311,30 @@ uci -q delete network.lan.dns
 
 # LAN (fallback)
 uci set network.lan.proto='static'
-uci set network.lan.ipaddr='{{MGMT_IP}}'
+uci set network.lan.ipaddr='${MGMT_IP}'
 uci set network.lan.netmask='255.255.255.0'
 uci set dhcp.lan.ignore='1'
 
 # WWAN (uplink)
 uci set network.wwan=interface
 uci set network.wwan.proto='static'
-uci set network.wwan.ipaddr='{{DEVICE_IP}}'
+uci set network.wwan.ipaddr='${DEVICE_IP}'
 uci set network.wwan.netmask='255.255.255.0'
 
 # Relay bridge
 uci set network.repeater_bridge=interface
 uci set network.repeater_bridge.proto='relay'
-uci set network.repeater_bridge.ipaddr='{{DEVICE_IP}}'
+uci set network.repeater_bridge.ipaddr='${DEVICE_IP}'
 uci add_list network.repeater_bridge.network='lan'
 uci add_list network.repeater_bridge.network='wwan'
 uci set network.repeater_bridge.forward_bcast='1'
 uci set network.repeater_bridge.forward_dhcp='1'
 
 # Radios
-uci set wireless.radio0.disabled='{{RADIO0_DISABLED}}'
-uci set wireless.radio0.country='{{COUNTRY}}'
-uci set wireless.radio1.disabled='{{RADIO1_DISABLED}}'
-uci set wireless.radio1.country='{{COUNTRY}}'
+uci set wireless.radio0.disabled='${RADIO0_DISABLED}'
+uci set wireless.radio0.country='${COUNTRY}'
+uci set wireless.radio1.disabled='${RADIO1_DISABLED}'
+uci set wireless.radio1.country='${COUNTRY}'
 
 # System
 uci set system.@system[0].timezone='UTC'
@@ -339,12 +342,12 @@ uci commit system
 
 # Station (uplink)
 uci set wireless.wwan=wifi-iface
-uci set wireless.wwan.device='{{STA_DEVICE}}'
+uci set wireless.wwan.device='${STA_DEVICE}'
 uci set wireless.wwan.network='wwan'
 uci set wireless.wwan.mode='sta'
-uci set wireless.wwan.ssid='{{UPLINK_SSID}}'
-uci set wireless.wwan.encryption='{{UPLINK_ENCRYPTION}}'
-uci set wireless.wwan.key='{{UPLINK_KEY}}'
+uci set wireless.wwan.ssid='${UPLINK_SSID}'
+uci set wireless.wwan.encryption='${UPLINK_ENCRYPTION}'
+uci set wireless.wwan.key='${UPLINK_KEY}'
 BASECFG
 
 # Add AP configuration
@@ -355,22 +358,22 @@ if [[ "${AP_DUAL:-}" == "1" ]]; then
 
 # Access Point - 2.4GHz
 uci set wireless.ap_extra=wifi-iface
-uci set wireless.ap_extra.device='{{AP0_DEVICE}}'
+uci set wireless.ap_extra.device='${AP0_DEVICE}'
 uci set wireless.ap_extra.network='lan'
 uci set wireless.ap_extra.mode='ap'
-uci set wireless.ap_extra.ssid='{{AP_SSID}}'
-uci set wireless.ap_extra.encryption='{{AP_ENCRYPTION}}'
-uci set wireless.ap_extra.key='{{AP_KEY}}'
+uci set wireless.ap_extra.ssid='${AP_SSID}'
+uci set wireless.ap_extra.encryption='${AP_ENCRYPTION}'
+uci set wireless.ap_extra.key='${AP_KEY}'
 uci set wireless.ap_extra.disassoc_low_ack='0'
 
 # Access Point - 5GHz
 uci set wireless.ap_extra2=wifi-iface
-uci set wireless.ap_extra2.device='{{AP1_DEVICE}}'
+uci set wireless.ap_extra2.device='${AP1_DEVICE}'
 uci set wireless.ap_extra2.network='lan'
 uci set wireless.ap_extra2.mode='ap'
-uci set wireless.ap_extra2.ssid='{{AP_SSID}}-5G'
-uci set wireless.ap_extra2.encryption='{{AP_ENCRYPTION}}'
-uci set wireless.ap_extra2.key='{{AP_KEY}}'
+uci set wireless.ap_extra2.ssid='${AP_SSID}-5G'
+uci set wireless.ap_extra2.encryption='${AP_ENCRYPTION}'
+uci set wireless.ap_extra2.key='${AP_KEY}'
 uci set wireless.ap_extra2.disassoc_low_ack='0'
 APCFG
 else
@@ -379,12 +382,12 @@ else
 
 # Access Point
 uci set wireless.ap_extra=wifi-iface
-uci set wireless.ap_extra.device='{{AP_DEVICE}}'
+uci set wireless.ap_extra.device='${AP_DEVICE}'
 uci set wireless.ap_extra.network='lan'
 uci set wireless.ap_extra.mode='ap'
-uci set wireless.ap_extra.ssid='{{AP_SSID}}'
-uci set wireless.ap_extra.encryption='{{AP_ENCRYPTION}}'
-uci set wireless.ap_extra.key='{{AP_KEY}}'
+uci set wireless.ap_extra.ssid='${AP_SSID}'
+uci set wireless.ap_extra.encryption='${AP_ENCRYPTION}'
+uci set wireless.ap_extra.key='${AP_KEY}'
 uci set wireless.ap_extra.disassoc_low_ack='0'
 APCFG
 fi
@@ -394,9 +397,9 @@ fi
 cat >> files/etc/uci-defaults/99-device-setup << 'FINAL'
 
 # Root password
-(echo '{{ROOT_PASSWORD}}'; echo '{{ROOT_PASSWORD}}') | passwd root
+(echo '${ROOT_PASSWORD}'; echo '${ROOT_PASSWORD}') | passwd root
 
-{{SSH_BLOCK}}
+${SSH_BLOCK}
 
 # Services
 [ -f /etc/init.d/firewall ] && /etc/init.d/firewall disable
@@ -436,7 +439,7 @@ docker build \
     --build-arg "OPENWRT_VERSION=$OPENWRT_VERSION" \
     --build-arg "OPENWRT_TARGET=$OPENWRT_TARGET" \
     -t "$DOCKER_TAG" \
-    -f - . << 'DOCKERFILE' 2>&1 | while read line; do echo "  $line"; done
+    -f - . << 'DOCKERFILE' 2>&1 | while IFS= read -r line; do echo "  $line"; done
 FROM alpine:latest
 ARG OPENWRT_VERSION
 ARG OPENWRT_TARGET
@@ -448,9 +451,12 @@ USER builder
 WORKDIR /builder
 RUN TARGET_PATH=$(echo "${OPENWRT_TARGET}" | tr '/' '-') && \
     URL="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/openwrt-imagebuilder-${OPENWRT_VERSION}-${TARGET_PATH}.Linux-x86_64.tar.zst" && \
+    SHA256_URL="${URL}.sha256" && \
     wget -q "$URL" -O imagebuilder.tar.zst && \
+    wget -q "$SHA256_URL" -O imagebuilder.tar.zst.sha256 && \
+    sha256sum -c imagebuilder.tar.zst.sha256 2>/dev/null && \
     tar --zstd -xf imagebuilder.tar.zst --strip-components=1 && \
-    rm imagebuilder.tar.zst
+    rm imagebuilder.tar.zst imagebuilder.tar.zst.sha256
 ENTRYPOINT ["/bin/bash", "-c"]
 DOCKERFILE
 
@@ -468,7 +474,7 @@ docker run --rm \
     -v "$(pwd)/files:/builder/custom-files:ro" \
     -v "$(pwd)/output:/output" \
     "$DOCKER_TAG" \
-    "make image PROFILE='${OPENWRT_PROFILE}' PACKAGES='-wpad-basic-mbedtls wpad-mbedtls -dnsmasq -odhcp6c -odhcpd-ipv6only -firewall4 -nftables -kmod-nft-offload -ppp -ppp-mod-pppoe relayd luci-proto-relay luci -luci-app-firewall' FILES='/builder/custom-files' BIN_DIR='/output'" 2>&1 | while read line; do echo "  $line"; done
+    "make image PROFILE='${OPENWRT_PROFILE}' PACKAGES='-wpad-basic-mbedtls wpad-mbedtls -dnsmasq -odhcp6c -odhcpd-ipv6only -firewall4 -nftables -kmod-nft-offload -ppp -ppp-mod-pppoe relayd luci-proto-relay luci -luci-app-firewall' FILES='/builder/custom-files' BIN_DIR='/output'" 2>&1 | while IFS= read -r line; do echo "  $line"; done
 
 echo ""
 echo -e "${GREEN}=== Build complete ===${NC}"
