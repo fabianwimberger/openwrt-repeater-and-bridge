@@ -44,7 +44,7 @@ Options:
   --mgmt-ip IP          Recovery IP if uplink fails (default: 192.168.2.1)
   --ap-ssid SSID        WiFi name for the repeater (default: <uplink>-EXT)
   --ap-key KEY          WiFi password for the repeater (default: same as uplink)
-  --root-password PWD   Admin password for the device (default: admin)
+  --root-password PWD   Admin password for the device (required)
   --ssh-pubkey KEY      SSH public key for key-based auth
   --encryption TYPE     WPA encryption: sae, psk2, sae-mixed (default: sae-mixed)
   --ap-encryption TYPE  AP encryption (default: psk2)
@@ -52,25 +52,30 @@ Options:
   --country CODE        Country code: US, DE, GB, etc. (default: US)
   --profile NAME        OpenWrt device profile (required)
   --target TARGET       OpenWrt target (required)
+  --openwrt-version VER OpenWrt release version (default: 25.12.3)
 
 Examples:
   # Simple 2.4GHz repeater for garage
   ./build.sh repeater-2g "HomeWiFi" "mypassword" \
-    --profile cudy_re3000-v1 --target mediatek/filogic
+    --profile cudy_re3000-v1 --target mediatek/filogic \
+    --root-password "change-this-root-password"
 
   # High-performance cross-band (recommended)
   ./build.sh cross-5up "HomeWiFi" "mypassword" \
     --profile cudy_re3000-v1 --target mediatek/filogic \
+    --root-password "change-this-root-password" \
     --ap-ssid "UpstairsWiFi"
 
   # 5GHz uplink with 2.4GHz AP only (for IoT devices)
   ./build.sh cross-5up-2ap "HomeWiFi" "mypassword" \
     --profile cudy_re3000-v1 --target mediatek/filogic \
+    --root-password "change-this-root-password" \
     --ap-ssid "IoT-Network"
 
   # With custom IP and SSH key
   ./build.sh cross-5up "HomeWiFi" "mypassword" \
     --profile cudy_re3000-v1 --target mediatek/filogic \
+    --root-password "change-this-root-password" \
     --device-ip 192.168.1.50 \
     --ssh-pubkey "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI..."
 
@@ -110,21 +115,21 @@ MGMT_IP="192.168.2.1"
 AP_SSID=""
 AP_KEY=""
 ROOT_PASSWORD="admin"
-if [[ "$ROOT_PASSWORD" == "admin" ]]; then
-    echo -e "${RED}Error: Default root password 'admin' is not allowed. Set a strong password with --root-password.${NC}"
-    exit 1
-fi
 SSH_PUBKEY=""
 UPLINK_ENCRYPTION="sae-mixed"
 AP_ENCRYPTION="psk2"
 COUNTRY="US"
 AP_ENABLED=1
-OPENWRT_VERSION="25.12.2"
+OPENWRT_VERSION="25.12.3"
 OPENWRT_TARGET=""
 OPENWRT_PROFILE=""
 
+if [[ $# -lt 3 ]]; then
+    usage_error "Mode, uplink SSID, and uplink password are required"
+fi
+
 # Parse optional arguments
-shift 3 || true
+shift 3
 while [[ $# -gt 0 ]]; do
     case $1 in
         --device-ip)
@@ -171,6 +176,10 @@ while [[ $# -gt 0 ]]; do
             OPENWRT_TARGET="$2"
             shift 2
             ;;
+        --openwrt-version)
+            OPENWRT_VERSION="$2"
+            shift 2
+            ;;
         --profile)
             OPENWRT_PROFILE="$2"
             shift 2
@@ -194,6 +203,11 @@ fi
 
 if [[ -z "$UPLINK_KEY" ]]; then
     usage_error "Uplink password is required"
+fi
+
+if [[ "$ROOT_PASSWORD" == "admin" ]]; then
+    echo -e "${RED}Error: Default root password 'admin' is not allowed. Set a strong password with --root-password.${NC}"
+    exit 1
 fi
 
 if [[ -z "$OPENWRT_PROFILE" ]]; then
@@ -289,10 +303,23 @@ echo "  Uplink:    $UPLINK_SSID"
 echo "  AP Name:   $AP_SSID"
 echo ""
 
-# Generate UCI defaults
-mkdir -p files/etc/uci-defaults
+sh_quote() {
+    local value=${1//\'/\'\\\'\'}
+    printf "'%s'" "$value"
+}
 
-cat > files/etc/uci-defaults/99-device-setup << 'BASECFG'
+BUILD_FILES_DIR="$(mktemp -d)"
+cleanup() {
+    rm -rf "$BUILD_FILES_DIR"
+}
+trap cleanup EXIT
+
+# Generate UCI defaults
+mkdir -p "$BUILD_FILES_DIR/etc/uci-defaults"
+
+UCI_SCRIPT="$BUILD_FILES_DIR/etc/uci-defaults/99-device-setup"
+
+cat > "$UCI_SCRIPT" << 'BASECFG'
 #!/bin/sh
 # OpenWrt repeater/bridge setup
 # Mode: ${MODE}
@@ -310,30 +337,30 @@ uci -q delete network.lan.dns
 
 # LAN (fallback)
 uci set network.lan.proto='static'
-uci set network.lan.ipaddr='${MGMT_IP}'
+uci set network.lan.ipaddr=${MGMT_IP_SH}
 uci set network.lan.netmask='255.255.255.0'
 uci set dhcp.lan.ignore='1'
 
 # WWAN (uplink)
 uci set network.wwan=interface
 uci set network.wwan.proto='static'
-uci set network.wwan.ipaddr='${DEVICE_IP}'
+uci set network.wwan.ipaddr=${DEVICE_IP_SH}
 uci set network.wwan.netmask='255.255.255.0'
 
 # Relay bridge
 uci set network.repeater_bridge=interface
 uci set network.repeater_bridge.proto='relay'
-uci set network.repeater_bridge.ipaddr='${DEVICE_IP}'
+uci set network.repeater_bridge.ipaddr=${DEVICE_IP_SH}
 uci add_list network.repeater_bridge.network='lan'
 uci add_list network.repeater_bridge.network='wwan'
 uci set network.repeater_bridge.forward_bcast='1'
 uci set network.repeater_bridge.forward_dhcp='1'
 
 # Radios
-uci set wireless.radio0.disabled='${RADIO0_DISABLED}'
-uci set wireless.radio0.country='${COUNTRY}'
-uci set wireless.radio1.disabled='${RADIO1_DISABLED}'
-uci set wireless.radio1.country='${COUNTRY}'
+uci set wireless.radio0.disabled=${RADIO0_DISABLED_SH}
+uci set wireless.radio0.country=${COUNTRY_SH}
+uci set wireless.radio1.disabled=${RADIO1_DISABLED_SH}
+uci set wireless.radio1.country=${COUNTRY_SH}
 
 # System
 uci set system.@system[0].timezone='UTC'
@@ -341,62 +368,62 @@ uci commit system
 
 # Station (uplink)
 uci set wireless.wwan=wifi-iface
-uci set wireless.wwan.device='${STA_DEVICE}'
+uci set wireless.wwan.device=${STA_DEVICE_SH}
 uci set wireless.wwan.network='wwan'
 uci set wireless.wwan.mode='sta'
-uci set wireless.wwan.ssid='${UPLINK_SSID}'
-uci set wireless.wwan.encryption='${UPLINK_ENCRYPTION}'
-uci set wireless.wwan.key='${UPLINK_KEY}'
+uci set wireless.wwan.ssid=${UPLINK_SSID_SH}
+uci set wireless.wwan.encryption=${UPLINK_ENCRYPTION_SH}
+uci set wireless.wwan.key=${UPLINK_KEY_SH}
 BASECFG
 
 # Add AP configuration
 if [[ "${AP_ENABLED:-1}" == "1" ]]; then
 if [[ "${AP_DUAL:-}" == "1" ]]; then
     # Dual-band AP
-    cat >> files/etc/uci-defaults/99-device-setup << 'APCFG'
+    cat >> "$UCI_SCRIPT" << 'APCFG'
 
 # Access Point - 2.4GHz
 uci set wireless.ap_extra=wifi-iface
-uci set wireless.ap_extra.device='${AP0_DEVICE}'
+uci set wireless.ap_extra.device=${AP0_DEVICE_SH}
 uci set wireless.ap_extra.network='lan'
 uci set wireless.ap_extra.mode='ap'
-uci set wireless.ap_extra.ssid='${AP_SSID}'
-uci set wireless.ap_extra.encryption='${AP_ENCRYPTION}'
-uci set wireless.ap_extra.key='${AP_KEY}'
+uci set wireless.ap_extra.ssid=${AP_SSID_SH}
+uci set wireless.ap_extra.encryption=${AP_ENCRYPTION_SH}
+uci set wireless.ap_extra.key=${AP_KEY_SH}
 uci set wireless.ap_extra.disassoc_low_ack='0'
 
 # Access Point - 5GHz
 uci set wireless.ap_extra2=wifi-iface
-uci set wireless.ap_extra2.device='${AP1_DEVICE}'
+uci set wireless.ap_extra2.device=${AP1_DEVICE_SH}
 uci set wireless.ap_extra2.network='lan'
 uci set wireless.ap_extra2.mode='ap'
-uci set wireless.ap_extra2.ssid='${AP_SSID}-5G'
-uci set wireless.ap_extra2.encryption='${AP_ENCRYPTION}'
-uci set wireless.ap_extra2.key='${AP_KEY}'
+uci set wireless.ap_extra2.ssid=${AP_SSID_5G_SH}
+uci set wireless.ap_extra2.encryption=${AP_ENCRYPTION_SH}
+uci set wireless.ap_extra2.key=${AP_KEY_SH}
 uci set wireless.ap_extra2.disassoc_low_ack='0'
 APCFG
 else
     # Single AP
-    cat >> files/etc/uci-defaults/99-device-setup << 'APCFG'
+    cat >> "$UCI_SCRIPT" << 'APCFG'
 
 # Access Point
 uci set wireless.ap_extra=wifi-iface
-uci set wireless.ap_extra.device='${AP_DEVICE}'
+uci set wireless.ap_extra.device=${AP_DEVICE_SH}
 uci set wireless.ap_extra.network='lan'
 uci set wireless.ap_extra.mode='ap'
-uci set wireless.ap_extra.ssid='${AP_SSID}'
-uci set wireless.ap_extra.encryption='${AP_ENCRYPTION}'
-uci set wireless.ap_extra.key='${AP_KEY}'
+uci set wireless.ap_extra.ssid=${AP_SSID_SH}
+uci set wireless.ap_extra.encryption=${AP_ENCRYPTION_SH}
+uci set wireless.ap_extra.key=${AP_KEY_SH}
 uci set wireless.ap_extra.disassoc_low_ack='0'
 APCFG
 fi
 fi
 
 # Final config
-cat >> files/etc/uci-defaults/99-device-setup << 'FINAL'
+cat >> "$UCI_SCRIPT" << 'FINAL'
 
 # Root password
-(echo '${ROOT_PASSWORD}'; echo '${ROOT_PASSWORD}') | passwd root
+(printf '%s\n' ${ROOT_PASSWORD_SH}; printf '%s\n' ${ROOT_PASSWORD_SH}) | passwd root
 
 ${SSH_BLOCK}
 
@@ -414,20 +441,42 @@ FINAL
 
 # Build SSH block
 if [[ -n "$SSH_PUBKEY" ]]; then
-    SSH_BLOCK="mkdir -p /etc/dropbear; echo '$SSH_PUBKEY' > /etc/dropbear/authorized_keys; chmod 600 /etc/dropbear/authorized_keys"
+    SSH_PUBKEY_SH="$(sh_quote "$SSH_PUBKEY")"
+    SSH_BLOCK="mkdir -p /etc/dropbear
+printf '%s\n' ${SSH_PUBKEY_SH} > /etc/dropbear/authorized_keys
+chmod 600 /etc/dropbear/authorized_keys"
 else
     SSH_BLOCK="# No SSH key configured"
 fi
 
-# Substitute variables
-export MODE DEVICE_IP MGMT_IP UPLINK_SSID UPLINK_KEY UPLINK_ENCRYPTION \
-       AP_SSID AP_KEY AP_ENCRYPTION ROOT_PASSWORD COUNTRY SSH_BLOCK \
-       RADIO0_DISABLED RADIO1_DISABLED STA_DEVICE AP_DEVICE \
-       AP0_DEVICE AP1_DEVICE AP_DUAL
+DEVICE_IP_SH="$(sh_quote "$DEVICE_IP")"
+MGMT_IP_SH="$(sh_quote "$MGMT_IP")"
+UPLINK_SSID_SH="$(sh_quote "$UPLINK_SSID")"
+UPLINK_KEY_SH="$(sh_quote "$UPLINK_KEY")"
+UPLINK_ENCRYPTION_SH="$(sh_quote "$UPLINK_ENCRYPTION")"
+AP_SSID_SH="$(sh_quote "$AP_SSID")"
+AP_SSID_5G_SH="$(sh_quote "${AP_SSID}-5G")"
+AP_KEY_SH="$(sh_quote "$AP_KEY")"
+AP_ENCRYPTION_SH="$(sh_quote "$AP_ENCRYPTION")"
+ROOT_PASSWORD_SH="$(sh_quote "$ROOT_PASSWORD")"
+COUNTRY_SH="$(sh_quote "$COUNTRY")"
+RADIO0_DISABLED_SH="$(sh_quote "$RADIO0_DISABLED")"
+RADIO1_DISABLED_SH="$(sh_quote "$RADIO1_DISABLED")"
+STA_DEVICE_SH="$(sh_quote "$STA_DEVICE")"
+AP_DEVICE_SH="$(sh_quote "${AP_DEVICE:-}")"
+AP0_DEVICE_SH="$(sh_quote "${AP0_DEVICE:-}")"
+AP1_DEVICE_SH="$(sh_quote "${AP1_DEVICE:-}")"
 
-envsubst < files/etc/uci-defaults/99-device-setup > files/etc/uci-defaults/99-device-setup.tmp
-mv files/etc/uci-defaults/99-device-setup.tmp files/etc/uci-defaults/99-device-setup
-chmod +x files/etc/uci-defaults/99-device-setup
+# Substitute variables
+export MODE SSH_BLOCK \
+       DEVICE_IP_SH MGMT_IP_SH UPLINK_SSID_SH UPLINK_KEY_SH UPLINK_ENCRYPTION_SH \
+       AP_SSID_SH AP_SSID_5G_SH AP_KEY_SH AP_ENCRYPTION_SH ROOT_PASSWORD_SH COUNTRY_SH \
+       RADIO0_DISABLED_SH RADIO1_DISABLED_SH STA_DEVICE_SH AP_DEVICE_SH \
+       AP0_DEVICE_SH AP1_DEVICE_SH
+
+envsubst < "$UCI_SCRIPT" > "${UCI_SCRIPT}.tmp"
+mv "${UCI_SCRIPT}.tmp" "$UCI_SCRIPT"
+chmod 700 "$UCI_SCRIPT"
 
 # Build Docker image
 TARGET_SLUG=$(echo "$OPENWRT_TARGET" | tr '/' '-')
@@ -470,7 +519,7 @@ echo ""
 
 docker run --rm \
     -u "$(id -u):$(id -g)" \
-    -v "$(pwd)/files:/builder/custom-files:ro" \
+    -v "${BUILD_FILES_DIR}:/builder/custom-files:ro" \
     -v "$(pwd)/output:/output" \
     "$DOCKER_TAG" \
     "make image PROFILE='${OPENWRT_PROFILE}' PACKAGES='-wpad-basic-mbedtls wpad-mbedtls -dnsmasq -odhcp6c -odhcpd-ipv6only -firewall4 -nftables -kmod-nft-offload -ppp -ppp-mod-pppoe relayd luci-proto-relay luci -luci-app-firewall' FILES='/builder/custom-files' BIN_DIR='/output'" 2>&1 | while IFS= read -r line; do echo "  $line"; done

@@ -11,7 +11,7 @@ Consumer WiFi extenders are opaque and underwhelming. OpenWrt solves that, but b
 
 ## Security Warning
 
-> **⚠️ IMPORTANT:** The default root password is `"admin"`. You **MUST** change this via `--root-password` for any production deployment. Leaving the default password on a network-facing device is a serious security risk.
+`--root-password` is required for every build. The builder rejects the old `"admin"` default.
 
 ## Features
 
@@ -27,11 +27,13 @@ Consumer WiFi extenders are opaque and underwhelming. OpenWrt solves that, but b
 ```bash
 # Build firmware for a 5GHz uplink with dual-band AP (recommended)
 ./build.sh cross-5up "MyHomeWiFi" "mywifiPassword" \
-    --profile cudy_re3000-v1 --target mediatek/filogic
+    --profile cudy_re3000-v1 --target mediatek/filogic \
+    --root-password "change-this-root-password"
 
 # Or with a custom AP name
 ./build.sh cross-5up "MyHomeWiFi" "mywifiPassword" \
     --profile cudy_re3000-v1 --target mediatek/filogic \
+    --root-password "change-this-root-password" \
     --ap-ssid "GarageWiFi"
 ```
 
@@ -85,23 +87,26 @@ These use one band to connect to your main router (uplink) and broadcast WiFi on
 ```bash
 # Simple 2.4GHz repeater for a garage
 ./build.sh repeater-2g "HomeWiFi" "password123" \
-    --profile cudy_re3000-v1 --target mediatek/filogic
+    --profile cudy_re3000-v1 --target mediatek/filogic \
+    --root-password "change-this-root-password"
 
 # High-performance setup with custom settings
 ./build.sh cross-5up "HomeWiFi" "password123" \
     --profile glinet_gl-mt3000 --target mediatek/filogic \
+    --root-password "change-this-root-password" \
     --ap-ssid "UpstairsWiFi" \
-    --device-ip 192.168.1.50 \
-    --root-password admin123
+    --device-ip 192.168.1.50
 
 # 5GHz uplink with 2.4GHz AP only (for smart home devices)
 ./build.sh cross-5up-2ap "HomeWiFi" "password123" \
     --profile cudy_re3000-v1 --target mediatek/filogic \
+    --root-password "change-this-root-password" \
     --ap-ssid "IoT-Network"
 
 # With SSH key for secure management
 ./build.sh cross-5up "HomeWiFi" "password123" \
     --profile cudy_re3000-v1 --target mediatek/filogic \
+    --root-password "change-this-root-password" \
     --ssh-pubkey "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI..."
 ```
 
@@ -113,7 +118,7 @@ These use one band to connect to your main router (uplink) and broadcast WiFi on
 | `--ap-key <password>` | WiFi password for the repeater | Same as uplink |
 | `--device-ip <ip>` | Static IP in your main network | 192.168.1.100 |
 | `--mgmt-ip <ip>` | Recovery IP if uplink fails | 192.168.2.1 |
-| `--root-password <pwd>` | Admin password for the device | admin |
+| `--root-password <pwd>` | Admin password for the device | **(required)** |
 | `--ssh-pubkey <key>` | SSH public key for key-based login | (none) |
 | `--encryption <type>` | `sae` (WPA3), `psk2` (WPA2), `sae-mixed` | sae-mixed |
 | `--ap-encryption <type>` | AP encryption (defaults to `psk2`) | psk2 |
@@ -137,18 +142,20 @@ If you already have OpenWrt running on the device, you can deploy without re-fla
 
 Works with any device supported by the OpenWrt ImageBuilder. You need to know your device's **profile** and **target** — find them at:
 
-https://downloads.openwrt.org/releases/25.12.2/targets/
+https://downloads.openwrt.org/releases/25.12.3/targets/
 
 ```bash
 # Example: Cudy RE3000 v1
 ./build.sh cross-5up "MyWiFi" "pass" \
     --profile "cudy_re3000-v1" \
-    --target "mediatek/filogic"
+    --target "mediatek/filogic" \
+    --root-password "change-this-root-password"
 
 # Example: GL.iNet MT3000
 ./build.sh cross-5up "MyWiFi" "pass" \
     --profile "glinet_gl-mt3000" \
-    --target "mediatek/filogic"
+    --target "mediatek/filogic" \
+    --root-password "change-this-root-password"
 ```
 
 ## Requirements

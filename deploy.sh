@@ -71,7 +71,7 @@ if [[ -z "$FIRMWARE" ]]; then
 fi
 
 FIRMWARE_NAME=$(basename "$FIRMWARE")
-SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
+SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10)
 
 echo -e "${BLUE}=== Deploying Firmware ===${NC}"
 echo ""
@@ -83,7 +83,7 @@ read -rp "Continue? [y/N] " confirm
 
 # Test connection first
 echo -n "Testing connection... "
-if ! sshpass -p "$ROOT_PASSWORD" ssh $SSH_OPTS "root@${DEVICE_IP}" "echo OK" 2>/dev/null | grep -q "OK"; then
+if ! SSHPASS="$ROOT_PASSWORD" sshpass -e ssh "${SSH_OPTS[@]}" "root@${DEVICE_IP}" "echo OK" 2>/dev/null | grep -q "OK"; then
     echo -e "${RED}FAILED${NC}"
     echo ""
     echo "Could not connect to $DEVICE_IP"
@@ -97,7 +97,7 @@ echo -e "${GREEN}OK${NC}"
 
 # Upload firmware
 echo -n "Uploading firmware... "
-if ! sshpass -p "$ROOT_PASSWORD" scp -O $SSH_OPTS "$FIRMWARE" "root@${DEVICE_IP}:/tmp/firmware.bin" 2>/dev/null; then
+if ! SSHPASS="$ROOT_PASSWORD" sshpass -e scp -O "${SSH_OPTS[@]}" "$FIRMWARE" "root@${DEVICE_IP}:/tmp/firmware.bin" 2>/dev/null; then
     echo -e "${RED}FAILED${NC}"
     exit 1
 fi
@@ -106,7 +106,7 @@ echo -e "${GREEN}OK${NC}"
 # Flash firmware
 echo "Flashing firmware (this may take a minute)..."
 echo ""
-sshpass -p "$ROOT_PASSWORD" ssh $SSH_OPTS "root@${DEVICE_IP}" "sysupgrade -n /tmp/firmware.bin" 2>/dev/null || true
+SSHPASS="$ROOT_PASSWORD" sshpass -e ssh "${SSH_OPTS[@]}" "root@${DEVICE_IP}" "sysupgrade -n /tmp/firmware.bin" 2>/dev/null || true
 
 echo ""
 echo -e "${GREEN}=== Deploy initiated ===${NC}"

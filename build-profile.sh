@@ -34,16 +34,37 @@ source "$COMMON_FILE"
 # shellcheck source=/dev/null
 source "$PROFILE_FILE"
 
-# Derive mode from profile
-if [[ "${RADIO0_DISABLED:-}" == "1" && "${STA_DEVICE:-}" == "radio1" ]]; then
-    MODE="repeater-5g"
-elif [[ "${RADIO1_DISABLED:-}" == "1" && "${STA_DEVICE:-}" == "radio0" ]]; then
-    MODE="repeater-2g"
-else
-    echo "Error: Cannot determine repeater mode from profile."
-    echo "       Expected one radio disabled matching STA_DEVICE."
-    exit 1
-fi
+case "${STA_DEVICE:-}:${AP_ENABLED:-0}:${AP_DUAL:-0}:${AP_DEVICE:-}:${RADIO0_DISABLED:-0}:${RADIO1_DISABLED:-0}" in
+    radio1:1:*:radio1:1:0 | radio1:0:*:*:1:0)
+        MODE="repeater-5g"
+        ;;
+    radio0:1:*:radio0:0:1 | radio0:0:*:*:0:1)
+        MODE="repeater-2g"
+        ;;
+    radio1:1:1:*:0:0)
+        MODE="cross-5up"
+        ;;
+    radio0:1:1:*:0:0)
+        MODE="cross-2up"
+        ;;
+    radio1:1:*:radio0:0:0)
+        MODE="cross-5up-2ap"
+        ;;
+    radio0:1:*:radio1:0:0)
+        MODE="cross-2up-5ap"
+        ;;
+    radio1:0:*:*:0:0)
+        MODE="cross-5up"
+        ;;
+    radio0:0:*:*:0:0)
+        MODE="cross-2up"
+        ;;
+    *)
+        echo "Error: Cannot determine repeater mode from profile."
+        echo "       Check STA_DEVICE, AP_ENABLED, AP_DEVICE, AP_DUAL, and radio disabled settings."
+        exit 1
+        ;;
+esac
 
 if [[ "$MODE" == "repeater-5g" ]]; then
     COUNTRY="${RADIO1_COUNTRY:-${RADIO0_COUNTRY:-AT}}"
@@ -60,6 +81,7 @@ ARGS=(
     --device-ip "$DEVICE_IP"
     --mgmt-ip "$MGMT_FALLBACK_IP"
     --root-password "$ROOT_PASSWORD"
+    --openwrt-version "$OPENWRT_VERSION"
     --encryption "$STA_ENCRYPTION"
     --ap-encryption "${AP_ENCRYPTION:-psk2}"
     --country "$COUNTRY"
