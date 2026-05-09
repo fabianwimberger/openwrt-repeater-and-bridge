@@ -478,35 +478,8 @@ envsubst < "$UCI_SCRIPT" > "${UCI_SCRIPT}.tmp"
 mv "${UCI_SCRIPT}.tmp" "$UCI_SCRIPT"
 chmod 700 "$UCI_SCRIPT"
 
-# Build Docker image
 TARGET_SLUG=$(echo "$OPENWRT_TARGET" | tr '/' '-')
-DOCKER_TAG="openwrt-imagebuilder:${OPENWRT_VERSION}-${TARGET_SLUG}"
-
-echo -e "${BLUE}Building ImageBuilder container...${NC}"
-docker build \
-    --build-arg "OPENWRT_VERSION=$OPENWRT_VERSION" \
-    --build-arg "OPENWRT_TARGET=$OPENWRT_TARGET" \
-    -t "$DOCKER_TAG" \
-    -f - . << 'DOCKERFILE' 2>&1 | while IFS= read -r line; do echo "  $line"; done
-FROM alpine:latest
-ARG OPENWRT_VERSION
-ARG OPENWRT_TARGET
-RUN apk add --no-cache bash coreutils make gcc g++ musl-dev ncurses-dev zlib-dev \
-    gawk git gettext openssl-dev libxslt rsync wget unzip python3 file perl \
-    findutils grep tar zstd patch diffutils bzip2 gzip xz zstd 2>/dev/null
-RUN adduser -D builder
-USER builder
-WORKDIR /builder
-RUN TARGET_PATH=$(echo "${OPENWRT_TARGET}" | tr '/' '-') && \
-    URL="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/${OPENWRT_TARGET}/openwrt-imagebuilder-${OPENWRT_VERSION}-${TARGET_PATH}.Linux-x86_64.tar.zst" && \
-    SHA256_URL="${URL}.sha256" && \
-    wget -q "$URL" -O imagebuilder.tar.zst && \
-    wget -q "$SHA256_URL" -O imagebuilder.tar.zst.sha256 && \
-    sha256sum -c imagebuilder.tar.zst.sha256 2>/dev/null && \
-    tar --zstd -xf imagebuilder.tar.zst --strip-components=1 && \
-    rm imagebuilder.tar.zst imagebuilder.tar.zst.sha256
-ENTRYPOINT ["/bin/bash", "-c"]
-DOCKERFILE
+DOCKER_TAG="openwrt/imagebuilder:${TARGET_SLUG}-${OPENWRT_VERSION}"
 
 # Run ImageBuilder
 mkdir -p output
@@ -521,8 +494,9 @@ docker run --rm \
     -u "$(id -u):$(id -g)" \
     -v "${BUILD_FILES_DIR}:/builder/custom-files:ro" \
     -v "$(pwd)/output:/output" \
+    --entrypoint /bin/sh \
     "$DOCKER_TAG" \
-    "make image PROFILE='${OPENWRT_PROFILE}' PACKAGES='-wpad-basic-mbedtls wpad-mbedtls -dnsmasq -odhcp6c -odhcpd-ipv6only -firewall4 -nftables -kmod-nft-offload -ppp -ppp-mod-pppoe relayd luci-proto-relay luci -luci-app-firewall' FILES='/builder/custom-files' BIN_DIR='/output'" 2>&1 | while IFS= read -r line; do echo "  $line"; done
+    -c "make image PROFILE='${OPENWRT_PROFILE}' PACKAGES='-wpad-basic-mbedtls wpad-mbedtls -dnsmasq -odhcp6c -odhcpd-ipv6only -firewall4 -nftables -kmod-nft-offload -ppp -ppp-mod-pppoe relayd luci-proto-relay luci -luci-app-firewall' FILES='/builder/custom-files' BIN_DIR='/output'" 2>&1 | while IFS= read -r line; do echo "  $line"; done
 
 echo ""
 echo -e "${GREEN}=== Build complete ===${NC}"
